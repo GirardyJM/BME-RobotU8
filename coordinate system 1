@@ -1,0 +1,63 @@
+import os
+import sys
+import time
+import math
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../..'))
+
+from xarm.wrapper import XArmAPI
+
+# Replace '192.168.1.xxx' with your xArm IP address
+ip = '192.168.1.197'
+arm = XArmAPI(ip)
+arm.motion_enable(enable=True)
+arm.clean_error()
+arm.set_mode(0)
+arm.set_state(0)
+time.sleep(0.1)
+
+speed = 20
+# Define a function to move to any point in 3D space
+def move_to_coordinate(x, y, z, roll=0, pitch=0, yaw=0, wait=True):
+    """
+    Move the xArm to a specific coordinate in the defined 3D space.
+
+    Parameters:
+    x, y, z (float): Target coordinates in mm.
+    roll, pitch, yaw (float): Orientation angles for the end effector in degrees.
+    wait (bool): Wait until the movement is completed.
+    """
+    # Move the arm to the specified 3D point
+    code = arm.set_position(x=x, y=y, z=z, roll=roll, pitch=pitch, yaw=yaw, wait=wait)
+    if code != 0:
+        print(f"Failed to move to ({x}, {y}, {z}), error code: {code}")
+    else:
+        print(f"Successfully moved to ({x}, {y}, {z})")
+
+
+# Main loop for user input
+try:
+    while True:
+        # Get user input for the coordinates
+        x = float(input("Enter x-coordinate (mm): "))
+        y = float(input("Enter y-coordinate (mm): "))
+        z = float(input("Enter z-coordinate (mm): "))
+
+        # Optional input for orientation
+        roll = float(input("Enter roll angle (degrees, default=0): ") or "0")
+        pitch = float(input("Enter pitch angle (degrees, default=0): ") or "0")
+        yaw = float(input("Enter yaw angle (degrees, default=0): ") or "0")
+
+        # Move the xArm to the specified coordinates
+        move_to_coordinate(x, y, z, roll=roll, pitch=pitch, yaw=yaw)
+
+        # Ask if the user wants to move to another position
+        cont = input("Do you want to move to another position? (yes/no): ").strip().lower()
+        if cont != 'yes':
+            break
+
+except KeyboardInterrupt:
+    print("Process interrupted by user.")
+
+# Disconnect after movements are complete
+arm.disconnect()

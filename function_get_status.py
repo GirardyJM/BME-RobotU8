@@ -42,15 +42,14 @@ joint_speed_limit:{arm.joint_speed_limit}
 joint_acc_limit:{arm.joint_acc_limit}
 joints_torque:{arm.joints_torque}
 """
+#test
+# def string_test(a,b):
+#     value = a+b
+#     return f"""value is: {value}
+# value is: {value}"""
 
-def string_test(a,b):
-    value = a+b
-    return f"""value is: {value}
-value is: {value}"""
-
-
-print(string_test(1,2))
-print(type(string_test(1,2)))
-print(get_status(port))
-arm = XArmAPI(port)
-print(type(arm.error_code))
+# print(string_test(1,2))
+# print(type(string_test(1,2)))
+# print(get_status(port))
+# arm = XArmAPI(port)
+# print(type(arm.error_code))

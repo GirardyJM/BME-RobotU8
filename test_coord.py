@@ -6,7 +6,7 @@ j = np.array([0, 1, 0])
 k = np.array([0, 0, 1])
 
 # This section requires measurements and should be perpendicular
-starting_point = np.array([306.2, 1.8, 63.4]) #H transform matrix away from base
+starting_point = np.array([148, 1.8, 64.6]) #initial position
 x = np.array([1, 0, 0])
 y = np.array([0, 1, 0])
 z = np.cross(x, y)
@@ -26,13 +26,14 @@ R = np.array([
 ])
 
 # Original point in Cartesian coordinates
-pinO = np.array([0, 0, 0])
+pinO = np.array([0, 0, 40])
 # Transform from original to target coordinate system
 trans = np.dot(R, (pinO - starting_point))
 
-transB =  np.dot(R.T, trans) + starting_point #from target coordinate system to global, trans can be arbitary point in target coordinate 
+#transformation relative to new initial point
+transB =  np.dot(R.T, pinO) + starting_point #from target coordinate system to global, pinOcan be arbitary point in target coordinate 
 
-print(trans)
+print(transB)
 
 import os
 import sys
@@ -43,13 +44,24 @@ from xarm.wrapper import XArmAPI
 import math
 from xarm.x3 import XArm, Studio
 
-port = '192.197.1.168'
+port = '192.168.1.197'
 
 arm = XArmAPI(port)
 arm.connect()
 arm.motion_enable(enable=True)
 arm.set_mode(0)
 arm.set_state(state=0)
-arm.set_position(x=trans[0], y=trans[1], z=trans[2], roll=-180, pitch=0, yaw=0, speed=50,is_radian=False,wait=True)
+#arm.set_position(x=starting_point[0],y=starting_point[1],z=starting_point[2],roll=-180,pitch=0,yaw=0,speed=50,is_radian=False,wait = True)
+#arm.set_position(x=transB[0], y=transB[1], z=transB[2], roll=-180, pitch=0, yaw=0, speed=50,is_radian=False,wait=True)
+arm.set_position(x=595.8,y=-8.1,z=312.8,roll=-180,pitch=0,yaw=0,speed=50,is_radian=False,wait = True)
+arm.set_gripper_enable(1)
+arm.set_gripper_position(104)
+'''arm.set_gripper_enable(...)
+arm.set_gripper_mode(...)
+arm.set_gripper_speed(...)
+arm.set_gripper_position(...)
+arm.get_gripper_position()
+arm.get_gripper_err_code()
+arm.clean_gripper_error()'''
 print(arm.get_position())
 arm.disconnect()

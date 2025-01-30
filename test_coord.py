@@ -1,13 +1,13 @@
 import numpy as np
 
-# global coordinate in Cartesian
+# global coordinate in base
 i = np.array([1, 0, 0])
 j = np.array([0, 1, 0])
 k = np.array([0, 0, 1])
 
 # This section requires measurements and should be perpendicular
-starting_point = np.array([148, 1.8, 64.6]) #initial position
-x = np.array([1, 0, 0])
+starting_point = np.array([148, 1.8, 64.6]) #initial position to base
+x = np.array([1, 0, 0]) #this input should be calculated by readout real-world position from digitalizer
 y = np.array([0, 1, 0])
 z = np.cross(x, y)
 
@@ -25,13 +25,14 @@ R = np.array([
     [np.dot(i, k_prime), np.dot(j, k_prime), np.dot(k, k_prime)]
 ])
 
-# Original point in Cartesian coordinates
+# Any point in either coordinate
 pinO = np.array([0, 0, 40])
-# Transform from original to target coordinate system
+
+# Transform from global to target coordinate
 trans = np.dot(R, (pinO - starting_point))
 
-#transformation relative to new initial point
-transB =  np.dot(R.T, pinO) + starting_point #from target coordinate system to global, pinOcan be arbitary point in target coordinate 
+#from target coordinate system to global, pinOcan be arbitary point in target coordinate 
+transB =  np.dot(R.T, pinO) + starting_point 
 
 print(transB)
 

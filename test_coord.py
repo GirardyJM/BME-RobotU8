@@ -1,4 +1,5 @@
 import numpy as np
+import math
 
 # global coordinate in base
 i = np.array([1, 0, 0])
@@ -35,6 +36,25 @@ trans = np.dot(R, (pinO - starting_point))
 transB =  np.dot(R.T, pinO) + starting_point 
 
 print(transB)
+
+#angles between tibia and fermur
+#get two coordinates first and take transformation matrix
+#test on getting angles; to calculate need distance between tibia and fermur
+x = np.array([0.5**0.5, 0.5**0.5, 0]) #this input should be calculated by readout real-world position from digitalizer
+y = np.array([-0.5**0.5, 0.5**0.5, 0])
+z = np.cross(x, y)
+R = np.array([
+    [np.dot(i, x), np.dot(j, x), np.dot(k, x)],
+    [np.dot(i, y), np.dot(j, y), np.dot(k, y)],
+    [np.dot(i, z), np.dot(j, z), np.dot(k, z)]
+])
+adduction = math.acos(R[0,2])-0.5*np.pi #default input as rad
+flexion = math.atan(R[1,2]/R[2,2])
+rotation = math.atan(R[0,1]/R[0,0])*180/np.pi #change from rad to degree
+print(adduction)
+print(flexion)
+print(rotation)
+
 
 import os
 import sys

@@ -73,34 +73,39 @@ def calculate_gs_angles(transformation_matrix):
     Calculate Grood-Suntay angles from transformation matrix
     Returns angles in degrees [IE, FE, VV]
     """
-    # Extract rotation matrix
+    # we grab just the rotation part of the matrix (top left 3x3)
     Tft = transformation_matrix[:3, :3]
     
-    # Define femur axes (fixed coordinate system)
+    # these are the axes for the femur, they don't move
     Fx = np.array([1, 0, 0])
     Fy = np.array([0, 1, 0])
     
-    # Get tibia axes from transformation
-    Tft_x = Tft[:, 0]  # First column is x-axis
-    Tft_y = Tft[:, 1]  # Second column is y-axis
+    # grab the new positions of the tibia axes after the movement
+    Tft_x = Tft[:, 0]  # x-axis of tibia 
+    Tft_y = Tft[:, 1]  # y-axis of tibia
     
-    # Calculate floating axis (e2)
+    #  make a "floating axis" that both bones share
+    #  crossing the axes
     e2 = np.cross(Tft_x, Fy)
-    e2_norm = np.linalg.norm(e2)
+    e2_norm = np.linalg.norm(e2)  # make sure it's length 1
     e2_unit = e2 / e2_norm
     
-    # Calculate Grood-Suntay angles
-    # Internal/External rotation (around fixed axis)
+    # we can get the three angles that describe the knee movement:
+    
+    # 1. internal/external rotation 
+    #  angles could wrap around
     output = np.cross(e2_unit, Fx)
     if output[1] > 0:
         alpha = np.arcsin(np.dot(e2_unit, Fx)) * 180/np.pi
     else:
         alpha = -180 - np.arcsin(np.dot(e2_unit, Fx)) * 180/np.pi
     
-    # Flexion/Extension (around floating axis)
+    # flexion/extension 
+    # 90 minus arccos gives us the angle from the straight leg position
     beta = 90 - np.arccos(np.dot(Fy, Tft_x)) * 180/np.pi
     
-    # Varus/Valgus (around moving axis)
+    # varus/valgus 
+    # this is the angle between the floating axis and tibia y-axis
     gamma = np.arcsin(np.dot(e2_unit, Tft_y)) * 180/np.pi
     
     return np.array([gamma, alpha, beta])
@@ -110,33 +115,40 @@ def create_gs_rotation_matrix(ie_angle, fe_angle, vv_angle):
     Create rotation matrix from Grood-Suntay angles
     Angles should be in degrees
     """
-    # Convert to radians
+    # convert our angles to radians 
     ie = np.radians(ie_angle)
     fe = np.radians(fe_angle)
     vv = np.radians(vv_angle)
     
-    # Create individual rotation matrices
+    # make three rotation matrices, one for each type of movement
+    # each one rotates around a different axis
+    
+    # knee bending (flexion/extension)
     R_fe = np.array([
         [np.cos(fe), -np.sin(fe), 0],
         [np.sin(fe), np.cos(fe), 0],
         [0, 0, 1]
     ])
     
+    #  (internal/external) twisting
     R_ie = np.array([
         [1, 0, 0],
         [0, np.cos(ie), -np.sin(ie)],
         [0, np.sin(ie), np.cos(ie)]
     ])
     
+    #  knee knocking (varus/valgus)
     R_vv = np.array([
         [np.cos(vv), 0, -np.sin(vv)],
         [0, 1, 0],
         [np.sin(vv), 0, np.cos(vv)]
     ])
     
-    # Combine rotations (order matters!)
+    # combine all three rotations - the order does matter 
+    # we do varus/valgus, then flexion/extension, then internal/external
+    
     return R_vv @ R_fe @ R_ie
-
+    
 def test_gs_rotations(fe_angle, ie_angle=0, vv_angle=0):
     """
     Test rotations using Grood-Suntay angles

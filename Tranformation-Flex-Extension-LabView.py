@@ -1,0 +1,320 @@
+def create_transformation_matrix(starting_point):
+    """Creates and returns the transformation matrix for knee-to-robot coordinates"""
+    point_spacing = 25.4
+    
+    p1 = starting_point + np.array([-point_spacing / 2, 0, 0])
+    p2 = starting_point
+    p3 = starting_point + np.array([point_spacing / 2, 0, 0])
+    
+    O_robot = p2
+    x_robot = p3 - p1
+    y_robot = np.array([0, 1, 0])
+    z_robot = np.cross(x_robot, y_robot)
+    
+    x_robot = x_robot / np.linalg.norm(x_robot)
+    y_robot = y_robot / np.linalg.norm(y_robot)
+    z_robot = z_robot / np.linalg.norm(z_robot)
+    
+    A = np.array([620.4453110694885, 47.15324938297272, 171.99364304542542])
+    B = np.array([626.9657611846924, -29.983650892972946, 171.94780707359314])
+    C = np.array([626.97, 3.73791, 88.1255])
+    D = np.array([626.97, 3.73, 40])
+    
+    Of = (A + B) / 2
+    Ot = Of + (D - C)
+    x_knee = Of - Ot
+    y_knee = A - B
+    z_knee = np.cross(x_knee, y_knee)
+    
+    x_knee = x_knee / np.linalg.norm(x_knee)
+    y_knee = y_knee / np.linalg.norm(y_knee)
+    z_knee = z_knee / np.linalg.norm(z_knee)
+    
+    R_knee_to_robot = np.array([x_robot, y_robot, z_robot]).T @ np.array([x_knee, y_knee, z_knee])
+    translation = O_robot - Of
+    transformation_matrix = np.eye(4)
+    transformation_matrix[:3, :3] = R_knee_to_robot
+    transformation_matrix[:3, 3] = translation
+    
+    return transformation_matrix, Of
+
+def calculate_gs_angles(transformation_matrix):
+    """Calculate Grood-Suntay angles from transformation matrix"""
+    Tft = transformation_matrix[:3, :3]
+    
+    Fx = np.array([1, 0, 0])
+    Fy = np.array([0, 1, 0])
+    
+    Tft_x = Tft[:, 0]
+    Tft_y = Tft[:, 1]
+    
+    e2 = np.cross(Tft_x, Fy)
+    e2_norm = np.linalg.norm(e2)
+    e2_unit = e2 / e2_norm
+    
+    output = np.cross(e2_unit, Fx)
+    if output[1] > 0:
+        alpha = np.arcsin(np.dot(e2_unit, Fx)) * 180/np.pi
+    else:
+        alpha = -180 - np.arcsin(np.dot(e2_unit, Fx)) * 180/np.pi
+    
+    beta = 90 - np.arccos(np.dot(Fy, Tft_x)) * 180/np.pi
+    gamma = np.arcsin(np.dot(e2_unit, Tft_y)) * 180/np.pi
+    
+    return np.array([gamma, alpha, beta])
+
+def create_gs_rotation_matrix(ie_angle, fe_angle, vv_angle):
+    """Create rotation matrix from Grood-Suntay angles"""
+    ie = np.radians(ie_angle)
+    fe = np.radians(fe_angle)
+    vv = np.radians(vv_angle)
+    
+    R_fe = np.array([
+        [np.cos(fe), -np.sin(fe), 0],
+        [np.sin(fe), np.cos(fe), 0],
+        [0, 0, 1]
+    ])
+    
+    R_ie = np.array([
+        [1, 0, 0],
+        [0, np.cos(ie), -np.sin(ie)],
+        [0, np.sin(ie), np.cos(ie)]
+    ])
+    
+    R_vv = np.array([
+        [np.cos(vv), 0, -np.sin(vv)],
+        [0, 1, 0],
+        [np.sin(vv), 0, np.cos(vv)]
+    ])
+    
+    return R_vv @ R_fe @ R_ie
+
+def calculate_gs_position(fe_angle, ie_angle=0, vv_angle=0, starting_point=None):
+    """Calculate new position using Grood-Suntay angles"""
+    port = '192.168.1.197'
+    arm = XArmAPI(port)
+    arm.connect()
+    
+    if starting_point is None:
+        starting_point = np.array([597, -31.4, 317.7])
+    
+    transformation_matrix, Of = create_transformation_matrix(starting_point)
+    
+    rotation = create_gs_rotation_matrix(ie_angle, fe_angle, vv_angle)
+    
+    Of_homog = np.append(Of, 1)
+    pivot_knee = np.linalg.inv(transformation_matrix) @ Of_homog
+    
+    head_homog = np.append(starting_point, 1)
+    head_knee = np.linalg.inv(transformation_matrix) @ head_homog
+    
+    pivot_to_head = head_knee[:3] - pivot_knee[:3]
+    rotated_vector = rotation @ pivot_to_head
+    new_head_knee = pivot_knee[:3] + rotated_vector
+    
+    new_head_homog = np.append(new_head_knee, 1)
+    new_head_global = transformation_matrix @ new_head_homog
+    
+    arm.disconnect()
+    
+    return new_head_global[:3]
+
+def initialize_flexion_extension_control(starting_point=None):
+    """Initialize the flexion/extension system and pre-calculate positions"""
+    port = '192.168.1.197'
+    arm = XArmAPI(port)
+    arm.connect()
+    arm.motion_enable(enable=True)
+    arm.set_mode(0)
+    arm.set_state(state=0)
+    
+    if starting_point is None:
+        starting_point = np.array([597, -31.4, 317.7])
+    
+    transformation_matrix, Of = create_transformation_matrix(starting_point)
+    
+    angle_range = list(range(0, 121))
+    position_map = {}
+    
+    for angle in angle_range:
+        pos = calculate_gs_position(angle, 0, 0, starting_point)
+        roll_val = -180 + angle
+        position_map[angle] = [
+            float(pos[0]), float(pos[1]), float(pos[2]), 
+            roll_val, 0, 0
+        ]
+    
+    arm.set_position(
+        x=starting_point[0],
+        y=starting_point[1],
+        z=starting_point[2],
+        roll=-180,
+        pitch=0,
+        yaw=0,
+        speed=50,
+        wait=True
+    )
+    
+    arm.disconnect()
+    
+    return position_map
+
+def flexion_step_control(angle_increment=1, starting_point=None, current_angle=0):
+    """Increase flexion by specified increment"""
+    port = '192.168.1.197'
+    arm = XArmAPI(port)
+    arm.connect()
+    arm.motion_enable(enable=True)
+    arm.set_mode(0)
+    arm.set_state(state=0)
+    
+    if starting_point is None:
+        starting_point = np.array([597, -31.4, 317.7])
+    
+    position_map = initialize_flexion_extension_control(starting_point)
+    
+    new_angle = current_angle + angle_increment
+    
+    if new_angle > 120:
+        arm.disconnect()
+        return current_angle, False
+    
+    target_angle_int = int(round(new_angle))
+    target_position = position_map[target_angle_int]
+    
+    try:
+        arm.set_position(
+            x=target_position[0],
+            y=target_position[1],
+            z=target_position[2],
+            roll=target_position[3],
+            pitch=target_position[4],
+            yaw=target_position[5],
+            speed=30,
+            wait=True
+        )
+        
+        current_angle = target_angle_int
+        arm.disconnect()
+        return current_angle, True
+        
+    except Exception as e:
+        arm.disconnect()
+        return current_angle, False
+
+def extension_step_control(angle_increment=1, starting_point=None, current_angle=0):
+    """Increase extension by specified increment"""
+    port = '192.168.1.197'
+    arm = XArmAPI(port)
+    arm.connect()
+    arm.motion_enable(enable=True)
+    arm.set_mode(0)
+    arm.set_state(state=0)
+    
+    if starting_point is None:
+        starting_point = np.array([597, -31.4, 317.7])
+    
+    position_map = initialize_flexion_extension_control(starting_point)
+    
+    new_angle = current_angle - angle_increment
+    
+    if new_angle < 0:
+        arm.disconnect()
+        return current_angle, False
+    
+    target_angle_int = int(round(new_angle))
+    target_position = position_map[target_angle_int]
+    
+    try:
+        arm.set_position(
+            x=target_position[0],
+            y=target_position[1],
+            z=target_position[2],
+            roll=target_position[3],
+            pitch=target_position[4],
+            yaw=target_position[5],
+            speed=30,
+            wait=True
+        )
+        
+        current_angle = target_angle_int
+        arm.disconnect()
+        return current_angle, True
+        
+    except Exception as e:
+        arm.disconnect()
+        return current_angle, False
+
+def set_specific_flexion_angle(target_angle, starting_point=None):
+    """Move to a specific flexion angle"""
+    port = '192.168.1.197'
+    arm = XArmAPI(port)
+    arm.connect()
+    arm.motion_enable(enable=True)
+    arm.set_mode(0)
+    arm.set_state(state=0)
+    
+    if starting_point is None:
+        starting_point = np.array([597, -31.4, 317.7])
+    
+    position_map = initialize_flexion_extension_control(starting_point)
+    
+    if target_angle < 0:
+        arm.disconnect()
+        return 0, False
+    
+    if target_angle > 120:
+        target_angle = 120
+    
+    target_angle_int = int(round(target_angle))
+    target_position = position_map[target_angle_int]
+    
+    try:
+        arm.set_position(
+            x=target_position[0],
+            y=target_position[1],
+            z=target_position[2],
+            roll=target_position[3],
+            pitch=target_position[4],
+            yaw=target_position[5],
+            speed=30,
+            wait=True
+        )
+        
+        arm.disconnect()
+        return target_angle_int, True
+        
+    except Exception as e:
+        arm.disconnect()
+        return 0, False
+
+def reset_to_start_position(starting_point=None):
+    """Return the robot to the starting position"""
+    port = '192.168.1.197'
+    arm = XArmAPI(port)
+    arm.connect()
+    arm.motion_enable(enable=True)
+    arm.set_mode(0)
+    arm.set_state(state=0)
+    
+    if starting_point is None:
+        starting_point = np.array([597, -31.4, 317.7])
+    
+    try:
+        arm.set_position(
+            x=starting_point[0],
+            y=starting_point[1],
+            z=starting_point[2],
+            roll=-180,
+            pitch=0,
+            yaw=0,
+            speed=50,
+            wait=True
+        )
+        
+        arm.disconnect()
+        return True
+        
+    except Exception as e:
+        arm.disconnect()
+        return False

@@ -177,7 +177,7 @@ def flexion_step_control(angle_increment=1, starting_point=None, current_angle=0
     
     if new_angle > 120:
         arm.disconnect()
-        return current_angle, False
+        return [current_angle, 0]
     
     target_angle_int = int(round(new_angle))
     target_position = position_map[target_angle_int]
@@ -196,11 +196,11 @@ def flexion_step_control(angle_increment=1, starting_point=None, current_angle=0
         
         current_angle = target_angle_int
         arm.disconnect()
-        return current_angle, True
+        return [current_angle, 1]
         
     except Exception as e:
         arm.disconnect()
-        return current_angle, False
+        return [current_angle, 0]
 
 def extension_step_control(angle_increment=1, starting_point=None, current_angle=0):
     """Increase extension by specified increment"""
@@ -220,7 +220,7 @@ def extension_step_control(angle_increment=1, starting_point=None, current_angle
     
     if new_angle < 0:
         arm.disconnect()
-        return current_angle, False
+        return [current_angle, 0]
     
     target_angle_int = int(round(new_angle))
     target_position = position_map[target_angle_int]
@@ -239,11 +239,11 @@ def extension_step_control(angle_increment=1, starting_point=None, current_angle
         
         current_angle = target_angle_int
         arm.disconnect()
-        return current_angle, True
+        return [current_angle, 1]
         
     except Exception as e:
         arm.disconnect()
-        return current_angle, False
+        return [current_angle, 0]
 
 def set_specific_flexion_angle(target_angle, starting_point=None):
     """Move to a specific flexion angle"""
@@ -261,7 +261,7 @@ def set_specific_flexion_angle(target_angle, starting_point=None):
     
     if target_angle < 0:
         arm.disconnect()
-        return 0, False
+        return [0, 0]
     
     if target_angle > 120:
         target_angle = 120
@@ -286,7 +286,7 @@ def set_specific_flexion_angle(target_angle, starting_point=None):
         
     except Exception as e:
         arm.disconnect()
-        return 0, False
+        return [0, 0]
 
 def reset_to_start_position(starting_point=None):
     """Return the robot to the starting position"""

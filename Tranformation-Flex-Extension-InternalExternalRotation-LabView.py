@@ -318,3 +318,111 @@ def reset_to_start_position(starting_point=None):
     except Exception as e:
         arm.disconnect()
         return False
+def internal_rotation_step(arm, position_map, increment=1, current_ie_angle=0):
+    global current_knee_angle
+    
+    new_ie_angle = current_ie_angle + increment
+    
+    if new_ie_angle > 30:
+        print("Maximum internal rotation is 30 degrees.")
+        return [current_ie_angle, 1]
+    
+    try:
+        target_angle_int = int(round(current_knee_angle))
+        target_position = position_map[target_angle_int].copy()
+        
+        target_position[5] = float(new_ie_angle)
+        
+        print(f"Moving to {new_ie_angle} degrees internal rotation")
+        print(f"Current flexion angle: {current_knee_angle} degrees")
+        
+        arm.set_position(
+            x=target_position[0],
+            y=target_position[1],
+            z=target_position[2],
+            roll=target_position[3],
+            pitch=target_position[4],
+            yaw=target_position[5],
+            speed=30,
+            wait=True
+        )
+        
+        return [new_ie_angle, 1]
+        
+    except Exception as e:
+        print(f"Error during internal rotation: {e}")
+        return [current_ie_angle, 0]
+
+def external_rotation_step(arm, position_map, increment=1, current_ie_angle=0):
+    global current_knee_angle
+    
+    new_ie_angle = current_ie_angle - increment
+    
+    if new_ie_angle < -30:
+        print("Maximum external rotation is 30 degrees.")
+        return [current_ie_angle, 1]
+    
+    try:
+        target_angle_int = int(round(current_knee_angle))
+        target_position = position_map[target_angle_int].copy()
+        
+        target_position[5] = float(new_ie_angle)
+        
+        print(f"Moving to {abs(new_ie_angle)} degrees external rotation")
+        print(f"Current flexion angle: {current_knee_angle} degrees")
+        
+        arm.set_position(
+            x=target_position[0],
+            y=target_position[1],
+            z=target_position[2],
+            roll=target_position[3],
+            pitch=target_position[4],
+            yaw=target_position[5],
+            speed=30,
+            wait=True
+        )
+        
+        return [new_ie_angle, 1]
+        
+    except Exception as e:
+        print(f"Error during external rotation: {e}")
+        return [current_ie_angle, 0]
+
+def set_internal_external_rotation(arm, position_map, target_ie_angle):
+    global current_knee_angle
+    
+    if target_ie_angle > 30:
+        print("Maximum internal rotation is 30 degrees. Setting to 30.")
+        target_ie_angle = 30
+    elif target_ie_angle < -30:
+        print("Maximum external rotation is 30 degrees. Setting to -30.")
+        target_ie_angle = -30
+    
+    try:
+        target_angle_int = int(round(current_knee_angle))
+        target_position = position_map[target_angle_int].copy()
+        
+        target_position[5] = float(target_ie_angle)
+        
+        rotation_type = "internal" if target_ie_angle >= 0 else "external"
+        display_angle = abs(target_ie_angle)
+        
+        print(f"Moving to {display_angle} degrees {rotation_type} rotation")
+        print(f"Current flexion angle: {current_knee_angle} degrees")
+        
+        arm.set_position(
+            x=target_position[0],
+            y=target_position[1],
+            z=target_position[2],
+            roll=target_position[3],
+            pitch=target_position[4],
+            yaw=target_position[5],
+            speed=30,
+            wait=True
+        )
+        
+        return [target_ie_angle, 1]
+        
+    except Exception as e:
+        print(f"Error setting internal/external rotation: {e}")
+        return [0, 0]

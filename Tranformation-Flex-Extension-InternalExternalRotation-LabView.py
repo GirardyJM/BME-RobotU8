@@ -2,20 +2,6 @@ import numpy as np
 import math
 from xarm.x3 import XArm, Studio
 from xarm.wrapper import XArmAPI
-'''Function Documentation
-external_rotation_step(arm, position_map, increment=1, current_ie_angle=0)
-Inputs:
-
-arm: XArmAPI object for controlling the robot arm
-position_map: Dictionary mapping angles to position arrays [x, y, z, roll, pitch, yaw]
-increment: Float representing the increment to increase external rotation in degrees (default: 1)
-current_ie_angle: Float representing the current internal/external rotation angle in degrees (default: 0)
-
-set_internal_external_rotation(arm, position_map, target_ie_angle)
-Inputs:
-
-position_map: Dictionary mapping angles to position arrays [x, y, z, roll, pitch, yaw]
-target_ie_angle: Float representing the target internal/external rotation angle in degrees (-30 to 30, positive for internal, negative for external)'''
 
 def create_transformation_matrix(starting_point):
     """Creates and returns the transformation matrix for knee-to-robot coordinates

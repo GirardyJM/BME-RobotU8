@@ -1,3 +1,82 @@
+'''Function Documentation
+create_transformation_matrix(starting_point)
+Inputs:
+
+starting_point: 3D numpy array representing the starting position of the robot [x, y, z]
+
+calculate_gs_angles(transformation_matrix)
+Inputs:
+
+transformation_matrix: 4x4 numpy array representing the transformation matrix between knee and robot coordinates
+
+create_gs_rotation_matrix(ie_angle, fe_angle, vv_angle)
+Inputs:
+
+ie_angle: Float representing internal/external rotation angle in degrees
+fe_angle: Float representing flexion/extension angle in degrees
+vv_angle: Float representing varus/valgus angle in degrees
+
+calculate_gs_position(fe_angle, ie_angle=0, vv_angle=0, starting_point=None)
+Inputs:
+
+fe_angle: Float representing flexion/extension angle in degrees
+ie_angle: Float representing internal/external rotation angle in degrees (default: 0)
+vv_angle: Float representing varus/valgus angle in degrees (default: 0)
+starting_point: 3D numpy array representing the starting position [x, y, z] (default: [597, -31.4, 317.7])
+
+initialize_flexion_extension_control(starting_point=None)
+Inputs:
+
+starting_point: 3D numpy array representing the starting position [x, y, z] (default: [597, -31.4, 317.7])
+
+flexion_step_control(angle_increment=1, starting_point=None, current_angle=0)
+Inputs:
+
+angle_increment: Float representing the increment to increase flexion angle in degrees (default: 1)
+starting_point: 3D numpy array representing the starting position [x, y, z] (default: [597, -31.4, 317.7])
+current_angle: Float representing the current flexion angle in degrees (default: 0)
+
+extension_step_control(angle_increment=1, starting_point=None, current_angle=0)
+Inputs:
+
+angle_increment: Float representing the increment to increase extension angle in degrees (default: 1)
+starting_point: 3D numpy array representing the starting position [x, y, z] (default: [597, -31.4, 317.7])
+current_angle: Float representing the current flexion angle in degrees (default: 0)
+
+set_specific_flexion_angle(target_angle, starting_point=None)
+Inputs:
+
+target_angle: Float representing the target flexion angle in degrees (0-120)
+starting_point: 3D numpy array representing the starting position [x, y, z] (default: [597, -31.4, 317.7])
+
+reset_to_start_position(starting_point=None)
+Inputs:
+
+starting_point: 3D numpy array representing the starting position [x, y, z] (default: [597, -31.4, 317.7])
+
+internal_rotation_step(arm, position_map, increment=1, current_ie_angle=0)
+Inputs:
+
+arm: XArmAPI object for controlling the robot arm
+position_map: Dictionary mapping angles to position arrays [x, y, z, roll, pitch, yaw]
+increment: Float representing the increment to increase internal rotation in degrees (default: 1)
+current_ie_angle: Float representing the current internal/external rotation angle in degrees (default: 0)
+
+external_rotation_step(arm, position_map, increment=1, current_ie_angle=0)
+Inputs:
+
+arm: XArmAPI object for controlling the robot arm
+position_map: Dictionary mapping angles to position arrays [x, y, z, roll, pitch, yaw]
+increment: Float representing the increment to increase external rotation in degrees (default: 1)
+current_ie_angle: Float representing the current internal/external rotation angle in degrees (default: 0)
+
+set_internal_external_rotation(arm, position_map, target_ie_angle)
+Inputs:
+
+arm: XArmAPI object for controlling the robot arm
+position_map: Dictionary mapping angles to position arrays [x, y, z, roll, pitch, yaw]
+target_ie_angle: Float representing the target internal/external rotation angle in degrees (-30 to 30, positive for internal, negative for external)'''
+
 def create_transformation_matrix(starting_point):
     """Creates and returns the transformation matrix for knee-to-robot coordinates"""
     point_spacing = 25.4

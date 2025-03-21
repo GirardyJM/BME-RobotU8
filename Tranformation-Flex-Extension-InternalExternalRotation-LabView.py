@@ -77,6 +77,14 @@ arm: XArmAPI object for controlling the robot arm
 position_map: Dictionary mapping angles to position arrays [x, y, z, roll, pitch, yaw]
 target_ie_angle: Float representing the target internal/external rotation angle in degrees (-30 to 30, positive for internal, negative for external)'''
 
+import numpy as np
+import sys
+import os
+import time
+import math
+from xarm.x3 import XArm, Studio
+from xarm.wrapper import XArmAPI
+
 def create_transformation_matrix(starting_point):
     """Creates and returns the transformation matrix for knee-to-robot coordinates"""
     point_spacing = 25.4
@@ -467,41 +475,42 @@ def external_rotation_step(arm, position_map, increment=1, current_ie_angle=0):
         print(f"Error during external rotation: {e}")
         return [current_ie_angle, 0]
 
-def set_internal_external_rotation(arm, position_map, target_ie_angle):
-    global current_knee_angle
+def set_internal_external_rotation(target_ie_angle):
+    '''
+    target_ie_angle: Float representing the target internal/external rotation angle in degrees (-30 to 30, positive for internal, negative for external)
+    '''
+    port = '192.168.1.197'
+    arm = XArmAPI(port)
+    arm.connect()
+    arm.motion_enable(enable=True)
+    arm.set_mode(0)
+    arm.set_state(state=0)
     
     if target_ie_angle > 30:
-        print("Maximum internal rotation is 30 degrees. Setting to 30.")
         target_ie_angle = 30
     elif target_ie_angle < -30:
-        print("Maximum external rotation is 30 degrees. Setting to -30.")
         target_ie_angle = -30
     
     try:
-        target_angle_int = int(round(current_knee_angle))
-        target_position = position_map[target_angle_int].copy()
-        
-        target_position[5] = float(target_ie_angle)
-        
-        rotation_type = "internal" if target_ie_angle >= 0 else "external"
-        display_angle = abs(target_ie_angle)
-        
-        print(f"Moving to {display_angle} degrees {rotation_type} rotation")
-        print(f"Current flexion angle: {current_knee_angle} degrees")
-        
-        arm.set_position(
-            x=target_position[0],
-            y=target_position[1],
-            z=target_position[2],
-            roll=target_position[3],
-            pitch=target_position[4],
-            yaw=target_position[5],
-            speed=30,
-            wait=True
-        )
-        
-        return [target_ie_angle, 1]
+        # Get current position of the robot
+        current_pos = arm.get_position()
+        if current_pos[0] != 0:  # Check if position was successfully retrieved
+            # Extract current position values
+            x, y, z, roll, pitch, yaw = current_pos[1]
+            
+            # Change only the yaw value
+            arm.set_position(
+                x=x, y=y, z=z,
+                roll=roll, pitch=pitch, yaw=float(target_ie_angle),
+                speed=30, wait=True
+            )
+            
+            arm.disconnect()
+            return np.array([target_ie_angle, 1])
+        else:
+            arm.disconnect()
+            return np.array([0, 0])
         
     except Exception as e:
-        print(f"Error setting internal/external rotation: {e}")
-        return [0, 0]
+        arm.disconnect()
+        return np.array([0, 0])

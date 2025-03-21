@@ -514,3 +514,44 @@ def set_internal_external_rotation(target_ie_angle):
     except Exception as e:
         arm.disconnect()
         return np.array([0, 0])
+def varo_valgo():
+    '''
+    Function to adjust X position for varo/valgo movement
+    Asks user for input directly and adjusts accordingly
+    '''
+    port = '192.168.1.197'
+    arm = XArmAPI(port)
+    arm.connect()
+    arm.motion_enable(enable=True)
+    arm.set_mode(0)
+    arm.set_state(state=0)
+    
+    try:
+        # Get current position
+        current_pos = arm.get_position()
+        x, y, z, roll, pitch, yaw = current_pos[1]
+        
+        # Ask user for adjustment amount
+        adjustment = float(input("Enter X adjustment in mm (positive for valgo, negative for varo): "))
+        
+        # Calculate new x position
+        new_x = x + adjustment
+        
+        # Move to new position
+        arm.set_position(
+            x=new_x, y=y, z=z,
+            roll=roll, pitch=pitch, yaw=yaw,
+            speed=30, wait=True
+        )
+        
+        arm.disconnect()
+        return np.array([new_x, 1])
+        
+    except ValueError:
+        print("Invalid input. Please enter a number.")
+        arm.disconnect()
+        return np.array([0, 0])
+    except Exception as e:
+        print(f"Error: {e}")
+        arm.disconnect()
+        return np.array([0, 0])

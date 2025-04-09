@@ -299,6 +299,13 @@ def flexion_step_control(angle_increment=1, starting_point=None, current_angle=0
     
     if starting_point is None:
         starting_point = np.array([597, -31.4, 317.7])  # Using default starting point if none provided
+
+    if isinstance(angle_increment, (list, np.ndarray)):
+        angle_increment = float(angle_increment[0])
+    if isinstance(current_angle, (list, np.ndarray)):
+        current_angle = float(current_angle[0])
+    if starting_point is not None and isinstance(starting_point, (list, np.ndarray)):
+        starting_point = np.array(starting_point, dtype=float)
     
     # Initializing and getting position map
     position_map = initialize_flexion_extension_control(starting_point)

@@ -86,6 +86,7 @@ from xarm.x3 import XArm, Studio
 from xarm.wrapper import XArmAPI
 
 
+
 # Global variable to track the current knee angle across functions
 current_knee_angle = 0
 
@@ -166,10 +167,12 @@ def calculate_gs_angles(transformation_matrix):
 
 def create_gs_rotation_matrix(ie_angle, fe_angle, vv_angle):
     """Create rotation matrix from Grood-Suntay angles"""
-    ie = np.radians(ie_angle)  # Converting internal/external rotation angle to radians
-    fe = np.radians(fe_angle)  # Converting flexion/extension angle to radians
-    vv = np.radians(vv_angle)  # Converting varus/valgus angle to radians
-    
+    #ie = np.radians(ie_angle)  # Converting internal/external rotation angle to radians
+    #fe = np.radians(fe_angle)  # Converting flexion/extension angle to radians
+    #vv = np.radians(vv_angle)  # Converting varus/valgus angle to radians
+    ie = np.radians(float(np.array(ie_angle).flatten()[0]))
+    fe = np.radians(float(np.array(fe_angle).flatten()[0]))
+    vv = np.radians(float(np.array(vv_angle).flatten()[0]))
     # Creating rotation matrix for flexion/extension around y-axis
     R_fe = np.array([
         [np.cos(fe), -np.sin(fe), 0],
@@ -194,14 +197,29 @@ def create_gs_rotation_matrix(ie_angle, fe_angle, vv_angle):
     # Returning the combined rotation matrix by multiplying the individual rotation matrices
     return R_vv @ R_fe @ R_ie
 
-def calculate_gs_position(fe_angle, ie_angle=0, vv_angle=0, starting_point=None):
+def calculate_gs_position(fe_angle, ie_angle=0, vv_angle=0, starting_point=None, arm=None):
     """Calculate new position using Grood-Suntay angles"""
+    print("CALCULATE_GS_POSITION DEBUG:")
+    print("fe_angle =", fe_angle, type(fe_angle))
+    print("ie_angle =", ie_angle, type(ie_angle))
+    print("vv_angle =", vv_angle, type(vv_angle))
+    print("starting_point =", starting_point, type(starting_point))
     port = '192.168.1.197'  # Setting the IP address of the robot arm
-    arm = XArmAPI(port)  # Creating XArmAPI object for controlling the robot arm
-    arm.connect()  # Connecting to the robot arm
     
     if starting_point is None:
         starting_point = np.array([597, -31.4, 317.7])  # Using default starting point if none provided
+    
+    local_connection = False
+
+    if arm is None:
+        local_connection = True
+        port = '192.168.1.197'
+        arm = XArmAPI(port)
+        try:
+            arm.connect()
+        except Exception as e:
+            print(f"[ERROR] Could not connect to robot arm: {e}")
+            return np.array([-1, -1, -1])
     
     # Creating transformation matrix and getting femur origin
     transformation_matrix, Of = create_transformation_matrix(starting_point)
@@ -236,7 +254,8 @@ def calculate_gs_position(fe_angle, ie_angle=0, vv_angle=0, starting_point=None)
     # Transforming new head position back to global coordinates
     new_head_global = transformation_matrix @ new_head_homog
     
-    arm.disconnect()  # Disconnecting from the robot arm
+    if local_connection:
+        arm.disconnect()  # Disconnecting from the robot arm
     
     return new_head_global[:3]  # Returning the new position in global coordinates as numpy array
 
@@ -261,7 +280,7 @@ def initialize_flexion_extension_control(starting_point=None):
     # Pre-calculating position for each angle in the range
     for angle in angle_range:
         # Calculating position for this angle with no IE or VV rotation
-        pos = calculate_gs_position(angle, 0, 0, starting_point)
+        pos = calculate_gs_position(angle, 0, 0, starting_point, arm=arm)
         roll_val = -180 + angle  # Calculating roll value for robot (changes with flexion angle)
         
         # Storing position data as [x, y, z, roll, pitch, yaw]
@@ -288,6 +307,13 @@ def initialize_flexion_extension_control(starting_point=None):
 
 def flexion_step_control(angle_increment=1, starting_point=None, current_angle=0):
     """Increase flexion by specified increment"""
+    log_path = r"C:\Users\gjmwi\Downloads\python_log2.txt"
+    sys.stdout = open(log_path, "a", buffering=1)  # Line-buffered
+    sys.stderr = sys.stdout
+    print("DEBUG:")
+    print("angle_increment =", angle_increment, type(angle_increment))
+    print("starting_point =", starting_point, type(starting_point))
+    print("current_angle =", current_angle, type(current_angle))
     global current_knee_angle  # Using global variable to track knee angle
     
     port = '192.168.1.197'  # Setting the IP address of the robot arm
@@ -297,15 +323,31 @@ def flexion_step_control(angle_increment=1, starting_point=None, current_angle=0
     arm.set_mode(0)  # Setting robot to position control mode
     arm.set_state(state=0)  # Setting robot to ready state
     
-    if starting_point is None:
-        starting_point = np.array([597, -31.4, 317.7])  # Using default starting point if none provided
-
+    # --- Convert angle_increment to float ---
     if isinstance(angle_increment, (list, np.ndarray)):
+        angle_increment = np.array(angle_increment).astype(float).flatten()
+        if angle_increment.size == 0:
+            return np.array([-1, -1])
         angle_increment = float(angle_increment[0])
+    else:
+        angle_increment = float(angle_increment)
+
+    # --- Convert current_angle to float ---
     if isinstance(current_angle, (list, np.ndarray)):
+        current_angle = np.array(current_angle).astype(float).flatten()
+        if current_angle.size == 0:
+            return np.array([-1, -1])
         current_angle = float(current_angle[0])
-    if starting_point is not None and isinstance(starting_point, (list, np.ndarray)):
-        starting_point = np.array(starting_point, dtype=float)
+    else:
+        current_angle = float(current_angle)
+
+    # --- Convert starting_point to np.array ---
+    if starting_point is None:
+        starting_point = np.array([597, -31.4, 317.7], dtype=float)
+    else:
+        starting_point = np.array(starting_point, dtype=float).flatten()
+        if starting_point.size != 3:
+            return np.array([-1, -1])  # Expecting [x, y, z]
     
     # Initializing and getting position map
     position_map = initialize_flexion_extension_control(starting_point)
@@ -335,11 +377,13 @@ def flexion_step_control(angle_increment=1, starting_point=None, current_angle=0
         current_angle = target_angle_int  # Updating current angle
         current_knee_angle = current_angle  # Updating global knee angle variable
         arm.disconnect()  # Disconnecting from the robot arm
-        return np.array([current_angle, 1])  # Returning new angle and success flag as numpy array
+        return float(current_angle)
+  # Returning new angle and success flag as numpy array
         
     except Exception as e:
         arm.disconnect()  # Disconnecting from the robot arm on error
-        return np.array([current_angle, 0])  # Returning current angle and failure flag as numpy array
+        return float(current_angle)
+  # Returning current angle and failure flag as numpy array
 
 def extension_step_control(angle_increment=1, starting_point=None, current_angle=0):
     """Increase extension by specified increment"""

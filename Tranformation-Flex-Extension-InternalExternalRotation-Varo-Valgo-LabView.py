@@ -307,13 +307,13 @@ def initialize_flexion_extension_control(starting_point=None):
 
 def flexion_step_control(angle_increment=1, starting_point=None, current_angle=0):
     """Increase flexion by specified increment"""
-    log_path = r"C:\Users\gjmwi\Downloads\python_log2.txt"
-    sys.stdout = open(log_path, "a", buffering=1)  # Line-buffered
-    sys.stderr = sys.stdout
-    print("DEBUG:")
-    print("angle_increment =", angle_increment, type(angle_increment))
-    print("starting_point =", starting_point, type(starting_point))
-    print("current_angle =", current_angle, type(current_angle))
+    #log_path = r"C:\Users\Downloads\python_log2.txt"  # debug and shows your prints statements through a file sent to your computer , good to use for debugging
+    #sys.stdout = open(log_path, "a", buffering=1)  # Line-buffered
+    #sys.stderr = sys.stdout
+    #print("DEBUG:")
+    #print("angle_increment =", angle_increment, type(angle_increment))
+    #print("starting_point =", starting_point, type(starting_point))
+    #print("current_angle =", current_angle, type(current_angle))
     global current_knee_angle  # Using global variable to track knee angle
     
     port = '192.168.1.197'  # Setting the IP address of the robot arm
@@ -323,7 +323,7 @@ def flexion_step_control(angle_increment=1, starting_point=None, current_angle=0
     arm.set_mode(0)  # Setting robot to position control mode
     arm.set_state(state=0)  # Setting robot to ready state
     
-    # --- Convert angle_increment to float ---
+    # Convert angle_increment to float
     if isinstance(angle_increment, (list, np.ndarray)):
         angle_increment = np.array(angle_increment).astype(float).flatten()
         if angle_increment.size == 0:
@@ -332,7 +332,7 @@ def flexion_step_control(angle_increment=1, starting_point=None, current_angle=0
     else:
         angle_increment = float(angle_increment)
 
-    # --- Convert current_angle to float ---
+    # Convert current_angle to float 
     if isinstance(current_angle, (list, np.ndarray)):
         current_angle = np.array(current_angle).astype(float).flatten()
         if current_angle.size == 0:
@@ -341,7 +341,7 @@ def flexion_step_control(angle_increment=1, starting_point=None, current_angle=0
     else:
         current_angle = float(current_angle)
 
-    # --- Convert starting_point to np.array ---
+    # Convert starting_point to np.array
     if starting_point is None:
         starting_point = np.array([597, -31.4, 317.7], dtype=float)
     else:
@@ -378,12 +378,11 @@ def flexion_step_control(angle_increment=1, starting_point=None, current_angle=0
         current_knee_angle = current_angle  # Updating global knee angle variable
         arm.disconnect()  # Disconnecting from the robot arm
         return float(current_angle)
-  # Returning new angle and success flag as numpy array
         
     except Exception as e:
         arm.disconnect()  # Disconnecting from the robot arm on error
         return float(current_angle)
-  # Returning current angle and failure flag as numpy array
+
 
 def extension_step_control(angle_increment=1, starting_point=None, current_angle=0):
     """Increase extension by specified increment"""

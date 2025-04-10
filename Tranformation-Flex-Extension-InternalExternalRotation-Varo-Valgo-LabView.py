@@ -323,7 +323,7 @@ def flexion_step_control(angle_increment=1, starting_point=None, current_angle=0
     arm.set_mode(0)  # Setting robot to position control mode
     arm.set_state(state=0)  # Setting robot to ready state
     
-    # Convert angle_increment to float
+    # --- Convert angle_increment to float ---
     if isinstance(angle_increment, (list, np.ndarray)):
         angle_increment = np.array(angle_increment).astype(float).flatten()
         if angle_increment.size == 0:
@@ -332,7 +332,7 @@ def flexion_step_control(angle_increment=1, starting_point=None, current_angle=0
     else:
         angle_increment = float(angle_increment)
 
-    # Convert current_angle to float 
+    # --- Convert current_angle to float ---
     if isinstance(current_angle, (list, np.ndarray)):
         current_angle = np.array(current_angle).astype(float).flatten()
         if current_angle.size == 0:
@@ -341,7 +341,7 @@ def flexion_step_control(angle_increment=1, starting_point=None, current_angle=0
     else:
         current_angle = float(current_angle)
 
-    # Convert starting_point to np.array
+    # --- Convert starting_point to np.array ---
     if starting_point is None:
         starting_point = np.array([597, -31.4, 317.7], dtype=float)
     else:
@@ -378,11 +378,12 @@ def flexion_step_control(angle_increment=1, starting_point=None, current_angle=0
         current_knee_angle = current_angle  # Updating global knee angle variable
         arm.disconnect()  # Disconnecting from the robot arm
         return float(current_angle)
+  # Returning new angle and success flag as numpy array
         
     except Exception as e:
         arm.disconnect()  # Disconnecting from the robot arm on error
         return float(current_angle)
-
+  # Returning current angle and failure flag as numpy array
 
 def extension_step_control(angle_increment=1, starting_point=None, current_angle=0):
     """Increase extension by specified increment"""
@@ -405,7 +406,7 @@ def extension_step_control(angle_increment=1, starting_point=None, current_angle
     
     if new_angle < 0:  # Checking if new angle is below minimum
         arm.disconnect()  # Disconnecting from the robot arm
-        return np.array([current_angle, 0])  # Returning current angle and failure flag as numpy array
+        return float(current_angle)  # Returning current angle and failure flag as numpy array
     
     target_angle_int = int(round(new_angle))  # Rounding new angle to nearest integer
     target_position = position_map[target_angle_int]  # Getting pre-calculated position for this angle
@@ -426,11 +427,11 @@ def extension_step_control(angle_increment=1, starting_point=None, current_angle
         current_angle = target_angle_int  # Updating current angle
         current_knee_angle = current_angle  # Updating global knee angle variable
         arm.disconnect()  # Disconnecting from the robot arm
-        return np.array([current_angle, 1])  # Returning new angle and success flag as numpy array
+        return float(current_angle)  # Returning new angle and success flag as numpy array
         
     except Exception as e:
         arm.disconnect()  # Disconnecting from the robot arm on error
-        return np.array([current_angle, 0])  # Returning current angle and failure flag as numpy array
+        return float(current_angle)  # Returning current angle and failure flag as numpy array
 
 def set_specific_flexion_angle(target_angle, starting_point=None):
     """Move to a specific flexion angle"""
@@ -451,7 +452,7 @@ def set_specific_flexion_angle(target_angle, starting_point=None):
     
     if target_angle < 0:  # Checking if target angle is below minimum
         arm.disconnect()  # Disconnecting from the robot arm
-        return np.array([0, 0])  # Returning 0 angle and failure flag as numpy array
+        return [0, 0]  # Returning 0 angle and failure flag as numpy array
     
     if target_angle > 120:  # Capping target angle at maximum
         target_angle = 120
@@ -474,11 +475,11 @@ def set_specific_flexion_angle(target_angle, starting_point=None):
         
         current_knee_angle = target_angle_int  # Updating global knee angle variable
         arm.disconnect()  # Disconnecting from the robot arm
-        return np.array([target_angle_int, 1])  # Returning target angle and success flag as numpy array
+        return float(target_angle_int)  # Returning target angle and success flag as numpy array
         
     except Exception as e:
         arm.disconnect()  # Disconnecting from the robot arm on error
-        return np.array([0, 0])  # Returning 0 angle and failure flag as numpy array
+        return [0, 0]  # Returning 0 angle and failure flag as numpy array
 
 def reset_to_start_position(starting_point=None):
     """Return the robot to the starting position"""
@@ -509,11 +510,11 @@ def reset_to_start_position(starting_point=None):
         
         current_knee_angle = 0  # Resetting global knee angle to 0 (full extension)
         arm.disconnect()  # Disconnecting from the robot arm
-        return np.array([1])  # Returning success flag as numpy array
+        return [1]  # Returning success flag as numpy array
         
     except Exception as e:
         arm.disconnect()  # Disconnecting from the robot arm on error
-        return np.array([0])  # Returning failure flag as numpy array
+        return [0]  # Returning failure flag as numpy array
 
 def internal_rotation_step(increment=1, current_ie_angle=0, starting_point=None):
     """Increase internal rotation by specified increment"""
@@ -537,7 +538,7 @@ def internal_rotation_step(increment=1, current_ie_angle=0, starting_point=None)
     if new_ie_angle > 30:  # Checking if new angle exceeds maximum internal rotation
         print("Maximum internal rotation is 30 degrees.")
         arm.disconnect()  # Disconnecting from the robot arm
-        return np.array([current_ie_angle, 1])  # Returning current angle and success flag as numpy array (limited to max)
+        return float(current_ie_angle)  # Returning current angle and success flag as numpy array (limited to max)
     
     try:
         target_angle_int = int(round(current_knee_angle))  # Rounding current knee angle to nearest integer
@@ -562,12 +563,12 @@ def internal_rotation_step(increment=1, current_ie_angle=0, starting_point=None)
         )
         
         arm.disconnect()  # Disconnecting from the robot arm
-        return np.array([new_ie_angle, 1])  # Returning new angle and success flag as numpy array
+        return float(new_ie_angle)  # Returning new angle and success flag as numpy array
         
     except Exception as e:
         print(f"Error during internal rotation: {e}")
         arm.disconnect()  # Disconnecting from the robot arm on error
-        return np.array([current_ie_angle, 0])  # Returning current angle and failure flag as numpy array
+        return float(current_ie_angle)  # Returning current angle and failure flag as numpy array
 
 def external_rotation_step(increment=1, current_ie_angle=0, starting_point=None):
     """Increase external rotation by specified increment"""
@@ -591,7 +592,7 @@ def external_rotation_step(increment=1, current_ie_angle=0, starting_point=None)
     if new_ie_angle < -30:  # Checking if new angle exceeds maximum external rotation
         print("Maximum external rotation is 30 degrees.")
         arm.disconnect()  # Disconnecting from the robot arm
-        return np.array([current_ie_angle, 1])  # Returning current angle and success flag as numpy array (limited to max)
+        return float(current_ie_angle)  # Returning current angle and success flag as numpy array (limited to max)
     
     try:
         target_angle_int = int(round(current_knee_angle))  # Rounding current knee angle to nearest integer
@@ -616,12 +617,12 @@ def external_rotation_step(increment=1, current_ie_angle=0, starting_point=None)
         )
         
         arm.disconnect()  # Disconnecting from the robot arm
-        return np.array([new_ie_angle, 1])  # Returning new angle and success flag as numpy array
+        return float(new_ie_angle)  # Returning new angle and success flag as numpy array
         
     except Exception as e:
         print(f"Error during external rotation: {e}")
         arm.disconnect()  # Disconnecting from the robot arm on error
-        return np.array([current_ie_angle, 0])  # Returning current angle and failure flag as numpy array
+        return float(current_ie_angle)  # Returning current angle and failure flag as numpy array
 
 def set_internal_external_rotation(target_ie_angle, starting_point=None):
     """
@@ -656,14 +657,14 @@ def set_internal_external_rotation(target_ie_angle, starting_point=None):
             )
             
             arm.disconnect()  # Disconnecting from the robot arm
-            return np.array([target_ie_angle, 1])  # Returning target angle and success flag as numpy array
+            return float(target_ie_angle)  # Returning target angle and success flag as numpy array
         else:
             arm.disconnect()  # Disconnecting from the robot arm
-            return np.array([0, 0])  # Returning 0 angle and failure flag as numpy array
+            return [0, 0] # Returning 0 angle and failure flag as numpy array
         
     except Exception as e:
         arm.disconnect()  # Disconnecting from the robot arm on error
-        return np.array([0, 0])  # Returning 0 angle and failure flag as numpy array
+        return [0, 0]  # Returning 0 angle and failure flag as numpy array
 
 def varo_valgo(starting_point=None):
     """
@@ -696,15 +697,15 @@ def varo_valgo(starting_point=None):
         )
         
         arm.disconnect()  # Disconnecting from the robot arm
-        return np.array([new_x, 1])  # Returning new x position and success flag as numpy array
+        return float(new_x)  # Returning new x position and success flag as numpy array
         
     except ValueError:
         # Handling invalid input (not a number)
         print("Invalid input. Please enter a number.")
         arm.disconnect()  # Disconnecting from the robot arm
-        return np.array([0, 0])  # Returning 0 position and failure flag as numpy array
+        return [0, 0]  # Returning 0 position and failure flag as numpy array
     except Exception as e:
         # Handling other errors
         print(f"Error: {e}")
         arm.disconnect()  # Disconnecting from the robot arm
-        return np.array([0, 0])  # Returning 0 position and failure flag as numpy array
+        return [0, 0]  # Returning 0 position and failure flag as numpy array

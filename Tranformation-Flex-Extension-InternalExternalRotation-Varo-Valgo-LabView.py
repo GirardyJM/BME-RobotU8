@@ -666,46 +666,69 @@ def set_internal_external_rotation(target_ie_angle, starting_point=None):
         arm.disconnect()  # Disconnecting from the robot arm on error
         return [0, 0]  # Returning 0 angle and failure flag as numpy array
 
-def varo_valgo(starting_point=None):
+def varo_valgo(increment=0, starting_point=None, current_angle=0):
     """
-    Function to adjust X position for varo/valgo movement
-    Asks user for input directly and adjusts accordingly
+    Adjust robot's X position by 'increment' and return the new varus/valgus angle.
+    Compatible with LabVIEW Python Node.
     """
-    port = '192.168.1.197'  # Setting the IP address of the robot arm
-    arm = XArmAPI(port)  # Creating XArmAPI object for controlling the robot arm
-    arm.connect()  # Connecting to the robot arm
-    arm.motion_enable(enable=True)  # Enabling motion on the robot arm
-    arm.set_mode(0)  # Setting robot to position control mode
-    arm.set_state(state=0)  # Setting robot to ready state
-    
+    import numpy as np
+    from xarm.wrapper import XArmAPI
+
+    # --- Enforce scalar conversion from LabVIEW ---
+    def to_float(val, default=0.0):
+        try:
+            val = np.array(val).flatten()
+            return float(val[0])
+        except:
+            return float(default)
+
+    # --- Ensure starting point is valid ---
+    if starting_point is None:
+        start = np.array([597.0, -31.4, 317.7], dtype=float)
+    else:
+        try:
+            arr = np.array(starting_point, dtype=float).flatten()
+            if arr.size != 3:
+                return [-1.0]
+            start = arr
+        except:
+            return [-1.0]
+
+    # --- Convert increment and current_angle ---
+    inc = to_float(increment, default=0.0)
+    angle = to_float(current_angle, default=0.0)
+
+    # --- New X offset angle ---
+    new_angle = angle + inc
+
+    # --- Robot connection and movement ---
     try:
-        # Getting current position of the robot
-        current_pos = arm.get_position()
-        x, y, z, roll, pitch, yaw = current_pos[1]  # Extracting current position values
-        
-        # Asking user for adjustment amount via command line
-        adjustment = float(input("Enter X adjustment in mm (positive for valgo, negative for varo): "))
-        
-        # Calculating new x position by adding the adjustment
-        new_x = x + adjustment
-        
-        # Moving robot to new position with modified x value
+        arm = XArmAPI('192.168.1.197')
+        arm.connect()
+        arm.motion_enable(True)
+        arm.set_mode(0)
+        arm.set_state(0)
+
+        code, pos = arm.get_position()
+        if code != 0 or not isinstance(pos, list) or len(pos) < 6:
+            arm.disconnect()
+            return [-1.0]
+
+        x, y, z, roll, pitch, yaw = pos
+        x_new = x + inc
+
         arm.set_position(
-            x=new_x, y=y, z=z,
+            x=x_new, y=y, z=z,
             roll=roll, pitch=pitch, yaw=yaw,
-            speed=30, wait=True  # Wait until movement is complete
+            speed=30, wait=True
         )
-        
-        arm.disconnect()  # Disconnecting from the robot arm
-        return float(new_x)  # Returning new x position and success flag as numpy array
-        
-    except ValueError:
-        # Handling invalid input (not a number)
-        print("Invalid input. Please enter a number.")
-        arm.disconnect()  # Disconnecting from the robot arm
-        return [0, 0]  # Returning 0 position and failure flag as numpy array
-    except Exception as e:
-        # Handling other errors
-        print(f"Error: {e}")
-        arm.disconnect()  # Disconnecting from the robot arm
-        return [0, 0]  # Returning 0 position and failure flag as numpy array
+
+        arm.disconnect()
+        return float(new_angle)
+
+    except:
+        try:
+            arm.disconnect()
+        except:
+            pass
+        return [-1.0]

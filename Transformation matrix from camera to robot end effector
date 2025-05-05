@@ -1,0 +1,43 @@
+import numpy as np
+import open3d as o3d
+
+# --- 1. Input: Marker positions in flange and camera frame (Nx3) ---
+marker_positions_flange = np.array([
+    [0, 45, 5],
+    [30, -10, 0],
+    [-15, 15, 10]
+])
+
+marker_positions_camera = np.array([
+    [520.1, 288.2, 1003.4],
+    [550.7, 275.0, 1001.0],
+    [530.2, 290.4, 1012.5]
+])
+
+# --- 2. Run ICP or point-to-point registration (align camera → flange frame) ---
+source = o3d.geometry.PointCloud()
+target = o3d.geometry.PointCloud()
+source.points = o3d.utility.Vector3dVector(marker_positions_camera)
+target.points = o3d.utility.Vector3dVector(marker_positions_flange)
+
+# Identity initial guess
+init_transform = np.eye(4)
+
+reg_p2p = o3d.pipelines.registration.registration_icp(
+    source, target, max_correspondence_distance=50.0,
+    init=init_transform,
+    estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint()
+)
+
+# --- 3. Get transformation matrix: camera → flange ---
+T_camera_to_flange = reg_p2p.transformation
+print("Transformation matrix:\n", T_camera_to_flange)
+
+# --- 4. Define the TCP position in the flange frame ---
+tcp_flange = np.array([0.0, 0.0, 0.0, 1.0])  # Homogeneous coords (4D)
+
+# --- 5. Apply inverse to get TCP in camera frame ---
+T_flange_to_camera = np.linalg.inv(T_camera_to_flange)
+tcp_camera = T_flange_to_camera @ tcp_flange
+
+print("TCP position in camera frame:", tcp_camera[:3])  # xyz
